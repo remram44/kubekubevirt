@@ -1,4 +1,4 @@
-{{- range $vmIndex := until 1 (.Values.controlPlane.count | int) 1 }}
+{{- range $vmIndex := untilStep 1 (.Values.controlPlane.count | int) 1 }}
 {{- with $ }}
 ---
 apiVersion: batch/v1
