@@ -1,0 +1,9 @@
+get OS image: `curl -Lo ubuntu-24.04.qcow2 'https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img'`
+
+create SSH key and `cloud-init.iso`
+
+boot VM: `qemu-system-x86_64 -enable-kvm -cpu host -no-reboot -drive id=root,file=ubuntu-24.04.qcow2,format=qcow2,if=virtio -drive id=cidata,file=cloud-init.iso,media=cdrom,readonly=on,if=virtio -netdev "user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22" -device virtio-net-pci,netdev=net0 -m 8192 -smp 4`
+
+reset cloud-init: `cloud-init clean --logs --reboot`
+
+build image with ([reference](https://github.com/kubevirt/containerized-data-importer/blob/main/doc/image-from-registry.md)): `docker build . -t quay.io/remram44/kubekubevirt:ubuntu-24.04`

@@ -10,9 +10,9 @@ spec:
     resources:
       requests:
         storage: {{ .Values.controlPlane.disk.capacity }}
-        {{- if ne .Values.controlPlane.disk.storageClass nil }}
-        storageClassName: {{ .Values.controlPlane.disk.storageClass | quote }}
-        {{- end }}
+    {{- if ne .Values.controlPlane.disk.storageClass nil }}
+    storageClassName: {{ .Values.controlPlane.disk.storageClass | quote }}
+    {{- end }}
   source:
     registry:
       # TODO: Build image with Kubernetes

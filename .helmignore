@@ -21,3 +21,6 @@
 .idea/
 *.tmproj
 .vscode/
+# Local files
+/image
+/README.md
