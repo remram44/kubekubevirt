@@ -20,7 +20,7 @@ spec:
             #  USER=ubuntu
             #  HOST={{ include "kubekubevirt.fullname" . }}-controlplane-0
             #  SCRIPT="$(printf 'sudo kubeadm init --config /etc/kubekubevirt/config/kubeadm.yaml --node-name %s --upload-certs\n' $HOST)"
-            #  OUTPUT="$(sshpass -f /etc/kubekubevirt/secrets/ssh_password $USER@$HOST "$SCRIPT")"
+            #  OUTPUT="$(sshpass -f /etc/kubekubevirt/secrets/ssh_password ssh $USER@$HOST "$SCRIPT")"
             #  if [ $? != 0 ]; then exit 1; fi
           volumeMounts:
             - mountPath: /etc/kubekubevirt/config

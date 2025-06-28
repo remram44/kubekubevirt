@@ -10,6 +10,8 @@ SSH into VM: `ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i
 
 install Kubernetes
 
-reset cloud-init: `cloud-init clean --logs --reboot`
+make sure SSH is enabled, accept password logins
+
+reset cloud-init: `rm /home/ubuntu/.ssh/authorized_keys && cloud-init clean --logs --machine-id --configs all --seed --reboot`
 
 build image with ([reference](https://github.com/kubevirt/containerized-data-importer/blob/main/doc/image-from-registry.md)): `docker build . -t quay.io/remram44/kubekubevirt:ubuntu-24.04`
