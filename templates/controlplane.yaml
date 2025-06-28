@@ -16,8 +16,8 @@ spec:
   source:
     registry:
       # TODO: Build image with Kubernetes
-      #url: "docker://quay.io/remram44/kubekubevirt:ubuntu-24.04-k8s-1.32.5-20250627"
-      url: "docker://quay.io/remram44/kubekubevirt:ubuntu-24.04"
+      url: "docker://quay.io/remram44/kubekubevirt:ubuntu-24.04-k8s-1.32.5-20250627"
+      #url: "docker://quay.io/remram44/kubekubevirt:ubuntu-24.04"
 ---
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
