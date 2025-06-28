@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}
+  labels:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
+data:
+  kubeadm.yaml: |-
+    ---
+    kind: InitConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta4
+    localAPIEndpoint:
+      advertiseAddress: {{ include "kubekubevirt.fullname" . }}
+      bindPort: 6443
+    ---
+    kind: ClusterConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta4
+    kubernetesVersion: v1.32.5
+    controlPlaneEndpoint: {{ include "kubekubevirt.fullname" . }}:6443
+    networking:
+      serviceSubnet: {{ .Values.serviceSubnet }}
+      podSubnet: {{ .Values.podSubnet }}
+    certificatesDir: /etc/kubernetes/pki
+    etcd:
+      local:
+        dataDir: /var/lib/etcd
+    ---
+    kind: KubeletConfiguration
+    apiVersion: kubelet.config.k8s.io/v1beta1
+    cgroupDriver: systemd
+    maxPods: 110
+    serverTLSBootstrap: true
+    ---
+    apiVersion: kubeproxy.config.k8s.io/v1alpha1
+    kind: KubeProxyConfiguration
+    mode: ipvs
+    ipvs:
+      strictARP: true

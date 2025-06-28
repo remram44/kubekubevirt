@@ -1,0 +1,52 @@
+# Default values for kubekubevirt.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceSubnet: 192.168.16.0/20
+podSubnet: 192.168.0.0/20
+
+controlPlane:
+  count: 1
+  memory: 16384M
+  disk:
+    storageClass:
+    capacity: 100Gi
+
+worker:
+  count: 2
+  memory: 16384M
+  disk:
+    storageClass:
+    capacity: 100Gi
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

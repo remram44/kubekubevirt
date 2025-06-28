@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}
+  labels:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  publishNotReadyAddresses: true
+  selector:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
+    tier: control-plane
+  ports:
+    - name: port6443
+      port: 6443
+      protocol: TCP
+      targetPort: 6443

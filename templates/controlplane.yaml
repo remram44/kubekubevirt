@@ -1,0 +1,62 @@
+{{- range $vmIndex := until (.Values.controlPlane.count | int) }}
+{{- with $ }}
+---
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}-controlplane-{{ $vmIndex }}
+spec:
+  storage:
+    resources:
+      requests:
+        storage: {{ .Values.controlPlane.disk.capacity }}
+        {{- if ne .Values.controlPlane.disk.storageClass nil }}
+        storageClassName: {{ .Values.controlPlane.disk.storageClass | quote }}
+        {{- end }}
+  source:
+    registry:
+      # TODO: Build image with Kubernetes
+      #url: "docker://quay.io/remram44/kubekubevirt:ubuntu-24.04-k8s-1.32.5-20250627"
+      url: "docker://quay.io/remram44/kubekubevirt:ubuntu-24.04"
+---
+apiVersion: kubevirt.io/v1
+kind: VirtualMachine
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}-controlplane-{{ $vmIndex }}
+  labels:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
+    tier: controlplane
+spec:
+  running: true
+  template:
+    spec:
+      domain:
+        devices:
+          disks:
+            - disk:
+                bus: virtio
+              name: disk
+            - disk:
+                bus: virtio
+              name: cloudinit
+          interfaces:
+            - bridge: {}
+              name: default
+        machine:
+          type: q35
+        resources:
+          requests:
+            memory: {{ .Values.controlPlane.memory }}
+      networks:
+        - name: default
+          pod: {}
+      volumes:
+        - name: disk
+          dataVolume:
+            name: {{ include "kubekubevirt.fullname" . }}-controlplane-{{ $vmIndex }}
+        - name: cloudinit
+          cloudInitNoCloud:
+            secretRef:
+              name: {{ include "kubekubevirt.fullname" . }}-cloudinit
+{{- end }}
+{{- end }}
