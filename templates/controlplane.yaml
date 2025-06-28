@@ -40,6 +40,10 @@ spec:
           interfaces:
             - bridge: {}
               name: default
+        cpu:
+          sockets: 2
+          cores: 4
+          threads: 1
         machine:
           type: q35
         resources:

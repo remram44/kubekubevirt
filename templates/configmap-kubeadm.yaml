@@ -10,7 +10,6 @@ data:
     kind: InitConfiguration
     apiVersion: kubeadm.k8s.io/v1beta4
     localAPIEndpoint:
-      advertiseAddress: {{ include "kubekubevirt.fullname" . }}
       bindPort: 6443
     ---
     kind: ClusterConfiguration
