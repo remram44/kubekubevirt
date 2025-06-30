@@ -1,0 +1,15 @@
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: DataVolume
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}
+spec:
+  storage:
+    resources:
+      requests:
+        storage: 5Gi
+    {{- if ne .Values.storageClass nil }}
+    storageClassName: {{ .Values.storageClass | quote }}
+    {{- end }}
+  source:
+    registry:
+      url: "quay.io/remram44/kubekubevirt:ubuntu-24.04-1.32.5-20250628t0321z"

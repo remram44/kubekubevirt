@@ -6,11 +6,13 @@ create SSH key and `cloud-init.iso`
 
 boot VM: `qemu-system-x86_64 -enable-kvm -cpu host -no-reboot -drive id=root,file=ubuntu-24.04.qcow2,format=qcow2,if=virtio -drive id=cidata,file=cloud-init.iso,media=cdrom,readonly=on,if=virtio -netdev "user,id=net0,hostfwd=tcp:127.0.0.1:2222-:22" -device virtio-net-pci,netdev=net0 -m 8192 -smp 4`
 
-SSH into VM: `ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i id_rsa -p 2222 ubuntu@127.0.0.1`
+SSH into VM: `ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 ubuntu@127.0.0.1`
 
 install Kubernetes
 
 make sure SSH is enabled, accept password logins
+
+shrink filesystem and image
 
 reset cloud-init: `rm /home/ubuntu/.ssh/authorized_keys && cloud-init clean --logs --machine-id --configs all --seed --reboot`
 

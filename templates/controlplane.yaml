@@ -1,23 +1,25 @@
 {{- range $vmIndex := until (.Values.controlPlane.count | int) }}
 {{- with $ }}
 ---
-apiVersion: cdi.kubevirt.io/v1beta1
-kind: DataVolume
+apiVersion: v1
+kind: PersistentVolumeClaim
 metadata:
   name: {{ include "kubekubevirt.fullname" . }}-controlplane-{{ $vmIndex }}
   annotations:
     helm.sh/resource-policy: keep
 spec:
-  storage:
-    resources:
-      requests:
-        storage: {{ .Values.controlPlane.disk.capacity }}
-    {{- if ne .Values.controlPlane.disk.storageClass nil }}
-    storageClassName: {{ .Values.controlPlane.disk.storageClass | quote }}
-    {{- end }}
-  source:
-    registry:
-      url: "quay.io/remram44/kubekubevirt:ubuntu-24.04-1.32.5-20250628t0321z"
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.controlPlane.disk.capacity }}
+  {{- if ne .Values.storageClass nil }}
+  storageClassName: {{ .Values.storageClass | quote }}
+  {{- end }}
+  volumeMode: Block
+  dataSource:
+    kind: PersistentVolumeClaim
+    name: {{ include "kubekubevirt.fullname" . }}
 ---
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
@@ -56,8 +58,8 @@ spec:
           pod: {}
       volumes:
         - name: disk
-          dataVolume:
-            name: {{ include "kubekubevirt.fullname" . }}-controlplane-{{ $vmIndex }}
+          persistentVolumeClaim:
+            claimName: {{ include "kubekubevirt.fullname" . }}-controlplane-{{ $vmIndex }}
         - name: cloudinit
           cloudInitNoCloud:
             secretRef:
