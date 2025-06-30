@@ -12,4 +12,4 @@ spec:
     {{- end }}
   source:
     registry:
-      url: "quay.io/remram44/kubekubevirt:ubuntu-24.04-1.32.5-20250628t0321z"
+      url: "docker://quay.io/remram44/kubekubevirt:ubuntu-24.04-1.32.5-20250630t212831z"

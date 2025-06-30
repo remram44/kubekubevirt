@@ -41,6 +41,9 @@ spec:
             - disk:
                 bus: virtio
               name: cloudinit
+          filesystems:
+            - name: config
+              virtiofs: {}
           interfaces:
             - bridge: {}
               name: default
@@ -64,5 +67,8 @@ spec:
           cloudInitNoCloud:
             secretRef:
               name: {{ include "kubekubevirt.fullname" . }}-cloudinit
+        - name: config
+          configMap:
+            name: {{ include "kubekubevirt.fullname" . }}
 {{- end }}
 {{- end }}

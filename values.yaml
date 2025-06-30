@@ -12,8 +12,8 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
-serviceSubnet: 192.168.16.0/20
-podSubnet: 192.168.0.0/20
+serviceSubnet: 10.96.0.0/12
+podSubnet: 172.16.0.0/16
 
 storageClass:
 
