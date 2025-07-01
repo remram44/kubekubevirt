@@ -83,7 +83,7 @@ data:
     sed 's/ --control-plane//; s/ --certificate-key[ =][^ ]\+//' < /root/join-controlplane.command > /root/join-worker.command.new
     mv /root/join-worker.command.new /root/join-worker.command
     # TODO: Upload the command as a secret with kubectl
-    # install calico
+    # install calico; with VXLAN?
     # install kubelet-csr-approver
   join-controlplane.sh: |-
     apt-get update && apt-get install -yy sshpass # TODO: bake into image
