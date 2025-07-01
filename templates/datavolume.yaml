@@ -2,6 +2,8 @@ apiVersion: cdi.kubevirt.io/v1beta1
 kind: DataVolume
 metadata:
   name: {{ include "kubekubevirt.fullname" . }}
+  labels:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
 spec:
   storage:
     resources:
@@ -12,4 +14,4 @@ spec:
     {{- end }}
   source:
     registry:
-      url: "docker://quay.io/remram44/kubekubevirt:ubuntu-24.04-1.32.5-20250630t212831z"
+      url: "docker://ghcr.io/remram44/kubekubevirt:ubuntu-24.04-1.32.5-20250630t232927z"

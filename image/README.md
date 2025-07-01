@@ -8,9 +8,9 @@ boot VM: `qemu-system-x86_64 -enable-kvm -cpu host -no-reboot -drive id=root,fil
 
 SSH into VM: `ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p 2222 ubuntu@127.0.0.1`
 
-set hostname to kubekubevirt
-
 install Kubernetes
+
+install sshpass
 
 make sure SSH is enabled, accept password logins
 
@@ -18,4 +18,4 @@ reset cloud-init: `rm /home/ubuntu/.ssh/authorized_keys && cloud-init clean --lo
 
 shrink filesystem and image
 
-build image with ([reference](https://github.com/kubevirt/containerized-data-importer/blob/main/doc/image-from-registry.md)): `docker build . -t quay.io/remram44/kubekubevirt:ubuntu-24.04`
+build image with ([reference](https://github.com/kubevirt/containerized-data-importer/blob/main/doc/image-from-registry.md)): `docker build . -t ghcr.io/remram44/kubekubevirt:ubuntu-24.04`

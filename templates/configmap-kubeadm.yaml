@@ -35,3 +35,52 @@ data:
     mode: ipvs
     ipvs:
       strictARP: true
+  parse-kubeadm-init.py: |-
+    import re
+    import sys
+
+
+    for line in sys.stdin:
+        if "initialized successfully" in line:
+            break
+    else:
+        sys.exit(1)
+
+    join_command = []
+
+    for line in sys.stdin:
+        if re.search(r'\bkubeadm join\b', line):
+            join_command.append(line.strip().rstrip('\\').rstrip())
+            break
+    else:
+        sys.exit(1)
+
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            break
+        join_command.append(line.rstrip('\\').rstrip())
+
+    print(' '.join(join_command))
+  setup.sh: |-
+    mkdir /etc/kubekubevirt || exit 1
+    mount -t virtiofs config /etc/kubekubevirt || exit 1
+    if ! kubeadm init --config /etc/kubekubevirt/kubeadm.yaml --upload-certs > /root/kubeadm-init.log 2>&1; then
+      cat /root/kubeadm-init.log
+      exit 1
+    fi
+    python3 /etc/kubekubevirt/parse-kubeadm-init.py < kubeadm-init.log > /root/join-controlplane.command.new || exit 1
+    mv /root/join-controlplane.command.new /root/join-controlplane.command || exit 1
+    sed 's/ --control-plane//; s/ --certificate-key[ =][^ ]\+//' < /root/join-controlplane.command > /root/join-worker.command.new
+    mv /root/join-worker.command.new /root/join-worker.command
+    # install calico
+    # install kubelet-csr-approver
+  join-controlplane.sh: |-
+    # TODO: mount password file
+    # use join command on other nodes
+    while true; do
+      JOIN_COMMAND="$(sshpass -fpasswd ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@kubekubevirt-setup "sudo cat /root/join-command.txt")"
+      if [ $? != 0 ]; then
+        exit 1
+      fi
+      $JOIN_COMMAND || exit 1

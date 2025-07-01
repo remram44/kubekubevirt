@@ -6,10 +6,10 @@ metadata:
     {{- include "kubekubevirt.labels" . | nindent 4 }}
 spec:
   selector:
-    {{- include "kubekubevirt.labels" . | nindent 4 }}
-    tier: control-plane
+    {{- include "kubekubevirt.selectorLabels" . | nindent 4 }}
+    tier: controlplane
   ports:
-    - name: port6443
+    - name: https
       port: 6443
       protocol: TCP
       targetPort: 6443
