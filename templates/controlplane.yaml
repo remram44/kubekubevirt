@@ -50,6 +50,8 @@ spec:
           filesystems:
             - name: config
               virtiofs: {}
+            - name: secrets
+              virtiofs: {}
           interfaces:
             - bridge: {}
               name: default
@@ -76,5 +78,8 @@ spec:
         - name: config
           configMap:
             name: {{ include "kubekubevirt.fullname" . }}
+        - name: secrets
+          secret:
+            secretName: {{ include "kubekubevirt.fullname" . }}-ssh
 {{- end }}
 {{- end }}
