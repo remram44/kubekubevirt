@@ -90,7 +90,7 @@ data:
     while true; do
       JOIN_COMMAND="$(sshpass -f/etc/kubekubevirt-secrets/ssh_password ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@{{ include "kubekubevirt.fullname" . }}-setup "sudo cat /root/join-controlplane.command")"
       if [ $? = 0 ]; then
-        exec $JOIN_COMMAND
+        exec $JOIN_COMMAND > /root/kubeadm-join.log 2>&1
         exit 1
       fi
       sleep 10
