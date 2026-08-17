@@ -8,10 +8,10 @@ spec:
   storage:
     resources:
       requests:
-        storage: 5Gi
+        storage: 6Gi
     {{- if ne .Values.storageClass nil }}
     storageClassName: {{ .Values.storageClass | quote }}
     {{- end }}
   source:
     registry:
-      url: "docker://ghcr.io/remram44/kubekubevirt:ubuntu-24.04-1.32.5-20250630t232927z"
+      url: "docker://ghcr.io/remram44/kubekubevirt-vm:ubuntu-24.04-kubernetes-1.35.7-20260817t194544z"

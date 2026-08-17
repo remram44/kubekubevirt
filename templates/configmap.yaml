@@ -1,0 +1,254 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}
+  labels:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
+data:
+  kubeadm.yaml: |-
+    ---
+    kind: InitConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta4
+    localAPIEndpoint:
+      bindPort: 6443
+    ---
+    kind: ClusterConfiguration
+    apiVersion: kubeadm.k8s.io/v1beta4
+    kubernetesVersion: v1.35.7
+    controlPlaneEndpoint: {{ include "kubekubevirt.fullname" . }}:6443
+    networking:
+      serviceSubnet: {{ .Values.serviceSubnet }}
+      podSubnet: {{ .Values.podSubnet }}
+    certificatesDir: /etc/kubernetes/pki
+    etcd:
+      local:
+        dataDir: /var/lib/etcd
+    ---
+    kind: KubeletConfiguration
+    apiVersion: kubelet.config.k8s.io/v1beta1
+    cgroupDriver: systemd
+    maxPods: 110
+    serverTLSBootstrap: true
+    ---
+    apiVersion: kubeproxy.config.k8s.io/v1alpha1
+    kind: KubeProxyConfiguration
+    mode: ipvs
+    ipvs:
+      strictARP: true
+  parse-kubeadm-init.py: |-
+    import re
+    import sys
+
+
+    for line in sys.stdin:
+        if "initialized successfully" in line:
+            break
+    else:
+        sys.exit(1)
+
+    join_command = []
+
+    for line in sys.stdin:
+        if re.search(r'\bkubeadm join\b', line):
+            join_command.append(line.strip().rstrip('\\').rstrip())
+            break
+    else:
+        sys.exit(1)
+
+    for line in sys.stdin:
+        line = line.strip()
+        if not line:
+            break
+        join_command.append(line.rstrip('\\').rstrip())
+
+    print(' '.join(join_command))
+  run.sh: |-
+    exec > /var/log/kubekubevirt.log 2>&1
+    set -x
+    ourname="$(hostname | sed 's/^.*\(\(controlplane\|worker\)-[0-9]*\)$/\1/')"
+    ourkind="$(hostname | sed 's/^.*\(controlplane\|worker\)-[0-9]*$/\1/')"
+    if [ "$ourname" = "controlplane-0" ]; then
+      exec bash /etc/kubekubevirt/setup.sh
+    elif [ "$ourkind" = "controlplane" ]; then
+      exec bash /etc/kubekubevirt/join-controlplane.sh
+    elif [ "$ourkind" = "worker" ]; then
+      exec bash /etc/kubekubevirt/join-worker.sh
+    fi
+    exit 1
+  setup.sh: |-
+    set -x
+    # Create cluster
+    if ! kubeadm init --config /etc/kubekubevirt/kubeadm.yaml --upload-certs > /root/kubeadm-init.log 2>&1; then
+      cat /root/kubeadm-init.log
+      exit 1
+    fi
+    # Parse output to get controlplane join command
+    python3 /etc/kubekubevirt/parse-kubeadm-init.py < /root/kubeadm-init.log > /root/join-controlplane.command || exit 1
+    # Build worker join command
+    sed 's/ --control-plane//; s/ --certificate-key[ =][^ ]\+//' < /root/join-controlplane.command > /root/join-worker.command || exit 1
+    # Upload the command as a secret with kubectl
+    (
+    export KUBERNETES_SERVICE_HOST=kubernetes.default.svc.cluster.local
+    export KUBERNETES_SERVICE_PORT=443
+    export KUBERNETES_NAMESPACE={{ .Release.Namespace }}
+    (printf 'apiVersion: v1\nkind: Secret\nmetadata:\n  name: %s\ntype: Opaque\nstringData:\n  join-controlplane.command: |\n' "{{ include "kubekubevirt.fullname" . }}-kubeadm"; sed 's/^/    /' /root/join-controlplane.command; printf '\n  join-worker.command: |\n'; sed 's/^/    /' /root/join-worker.command) | kubectl apply -f - || exit 1
+    )
+    export KUBECONFIG=/etc/kubernetes/admin.conf
+    # Install kubelet-csr-approver
+    kubectl apply -f /etc/kubekubevirt/kubelet-csr-approver.yaml
+    # Install calico
+    kubectl apply -f https://github.com/projectcalico/calico/raw/v3.32.1/manifests/calico.yaml
+  join-controlplane.sh: |-
+    set -x
+    while true; do
+      # Get command from secret
+      export KUBERNETES_SERVICE_HOST=kubernetes.default.svc.cluster.local
+      export KUBERNETES_SERVICE_PORT=443
+      export KUBERNETES_NAMESPACE={{ .Release.Namespace }}
+      JOIN_COMMAND="$(kubectl get secret {{ include "kubekubevirt.fullname" . }}-kubeadm -o template='{{"{{"}} index .data "join-controlplane.command" }}')"
+      if [ $? = 0 ]; then
+        JOIN_COMMAND="$(printf '%s' "$JOIN_COMMAND" | base64 -d)"
+        # Run command
+        exec $JOIN_COMMAND > /root/kubeadm-join.log 2>&1
+        exit 1
+      fi
+      sleep 10
+    done
+  join-worker.sh: |-
+    set -x
+    while true; do
+      # Get command from secret
+      export KUBERNETES_SERVICE_HOST=kubernetes.default.svc.cluster.local
+      export KUBERNETES_SERVICE_PORT=443
+      export KUBERNETES_NAMESPACE={{ .Release.Namespace }}
+      JOIN_COMMAND="$(kubectl get secret {{ include "kubekubevirt.fullname" . }}-kubeadm -o template='{{"{{"}} index .data "join-worker.command" }}')"
+      if [ $? = 0 ]; then
+        JOIN_COMMAND="$(printf '%s' "$JOIN_COMMAND" | base64 -d)"
+        # Run command
+        exec $JOIN_COMMAND > /root/kubeadm-join.log 2>&1
+        exit 1
+      fi
+      sleep 10
+    done
+  kubelet-csr-approver.yaml: |
+    # From https://github.com/postfinance/kubelet-csr-approver/raw/v1.2.13/deploy/k8s/clusterrole.yaml
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRole
+    metadata:
+      name: kubelet-csr-approver
+    rules:
+    - apiGroups:
+      - certificates.k8s.io
+      resources:
+      - certificatesigningrequests
+      verbs:
+      - get
+      - list
+      - watch
+    - apiGroups:
+      - coordination.k8s.io
+      resources:
+      - leases
+      verbs:
+      - create
+      - get
+      - update
+    - apiGroups:
+      - certificates.k8s.io
+      resources:
+      - certificatesigningrequests/approval
+      verbs:
+      - update
+    - apiGroups:
+      - certificates.k8s.io
+      resourceNames:
+      - kubernetes.io/kubelet-serving
+      resources:
+      - signers
+      verbs:
+      - approve
+    - apiGroups:
+      - ""
+      resources:
+      - events
+      verbs:
+      - create
+    # From https://github.com/postfinance/kubelet-csr-approver/raw/v1.2.13/deploy/k8s/serviceaccount.yaml
+    ---
+    apiVersion: v1
+    kind: ServiceAccount
+    metadata:
+      name: kubelet-csr-approver
+      namespace: kube-system
+    # From https://github.com/postfinance/kubelet-csr-approver/raw/v1.2.13/deploy/k8s/rolebinding.yaml
+    ---
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: ClusterRoleBinding
+    metadata:
+      name: kubelet-csr-approver
+      namespace: kube-system
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: kubelet-csr-approver
+    subjects:
+    - kind: ServiceAccount
+      name: kubelet-csr-approver
+      namespace: kube-system
+    # From https://github.com/postfinance/kubelet-csr-approver/raw/v1.2.13/deploy/k8s/deployment.yaml
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: kubelet-csr-approver
+      namespace: kube-system
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app: kubelet-csr-approver
+
+      template:
+        metadata:
+          annotations:
+            prometheus.io/port: '8080'
+            prometheus.io/scrape: 'true'
+          labels:
+            app: kubelet-csr-approver
+
+        spec:
+          serviceAccountName: kubelet-csr-approver
+          containers:
+            - name: kubelet-csr-approver
+              image: ghcr.io/postfinance/kubelet-csr-approver:v1.2.14 # Changed repository away from DockerHub (rate limited), locked version
+              resources:
+                limits:
+                  memory: "128Mi"
+                  cpu: "500m"
+
+              args:
+                - -metrics-bind-address
+                - ":8080"
+                - -health-probe-bind-address
+                - ":8081"
+                - -leader-election
+                - --bypass-dns-resolution # Don't expect node names to be DNS
+
+              livenessProbe:
+                httpGet:
+                  path: /healthz
+                  port: 8081
+
+              env:
+                - name: PROVIDER_REGEX
+                  value: ^.*$ # Changed to allow any name
+                - name: PROVIDER_IP_PREFIXES
+                  value: "0.0.0.0/0,::/0"
+                - name: MAX_EXPIRATION_SEC
+                  value: "31622400" # 366 days
+
+          tolerations:
+            - effect: NoSchedule
+              key: node-role.kubernetes.io/control-plane
+              operator: Equal

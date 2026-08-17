@@ -1,10 +1,10 @@
-{{- range $vmIndex := until (.Values.controlPlane.count | int) }}
+{{- range $vmIndex := until (.Values.worker.count | int) }}
 {{- with $ }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "kubekubevirt.fullname" . }}-controlplane-{{ $vmIndex }}
+  name: {{ include "kubekubevirt.fullname" . }}-worker-{{ $vmIndex }}
   labels:
     {{- include "kubekubevirt.labels" . | nindent 4 }}
 spec:
@@ -12,7 +12,7 @@ spec:
     - ReadWriteOnce
   resources:
     requests:
-      storage: {{ .Values.controlPlane.disk.capacity }}
+      storage: {{ .Values.worker.disk.capacity }}
   {{- if ne .Values.storageClass nil }}
   storageClassName: {{ .Values.storageClass | quote }}
   {{- end }}
@@ -24,17 +24,17 @@ spec:
 apiVersion: kubevirt.io/v1
 kind: VirtualMachine
 metadata:
-  name: {{ include "kubekubevirt.fullname" . }}-controlplane-{{ $vmIndex }}
+  name: {{ include "kubekubevirt.fullname" . }}-worker-{{ $vmIndex }}
   labels:
     {{- include "kubekubevirt.labels" . | nindent 4 }}
-    tier: controlplane
+    tier: worker
 spec:
   runStrategy: Always
   template:
     metadata:
       labels:
         {{- include "kubekubevirt.labels" . | nindent 8 }}
-        tier: controlplane
+        tier: worker
     spec:
       domain:
         devices:
@@ -61,14 +61,14 @@ spec:
           type: q35
         resources:
           requests:
-            memory: {{ .Values.controlPlane.memory }}
+            memory: {{ .Values.worker.memory }}
       networks:
         - name: default
           pod: {}
       volumes:
         - name: disk
           persistentVolumeClaim:
-            claimName: {{ include "kubekubevirt.fullname" . }}-controlplane-{{ $vmIndex }}
+            claimName: {{ include "kubekubevirt.fullname" . }}-worker-{{ $vmIndex }}
         - name: cloudinit
           cloudInitNoCloud:
             secretRef:
