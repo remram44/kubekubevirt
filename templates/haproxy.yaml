@@ -1,0 +1,123 @@
+{{- if .Values.haproxy.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}-hl
+  labels:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "kubekubevirt.selectorLabels" . | nindent 4 }}
+    tier: controlplane
+  ports:
+    - name: https
+      port: 6443
+      protocol: TCP
+      targetPort: 6443
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}
+  labels:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "kubekubevirt.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: haproxy
+  ports:
+    - name: https
+      port: 6443
+      protocol: TCP
+      targetPort: 6443
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}-haproxy
+  labels:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
+data:
+  haproxy.cfg: |
+    frontend k8s-api
+        bind *:6443
+        mode tcp
+        default_backend k8s-api-servers
+
+    backend k8s-api-servers
+        mode tcp
+        option tcp-check
+        balance roundrobin
+        default-server inter 10s downinter 5s rise 2 fall 2 slowstart 60s maxconn 250 maxqueue 256 weight 100
+        server-template api-server 5 {{ include "kubekubevirt.fullname" . }}-hl.{{ .Release.Namespace }}.svc.cluster.local:6443 check resolvers default init-addr none
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}-haproxy
+  labels:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
+    app.kubernetes.io/component: haproxy
+spec:
+  selector:
+    matchLabels:
+      {{- include "kubekubevirt.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: haproxy
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "kubekubevirt.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: haproxy
+    spec:
+      containers:
+        - name: haproxy
+          image: haproxy:3.4
+          ports:
+            - containerPort: 6443
+              name: https
+              protocol: TCP
+          resources:
+            limits:
+              cpu: "1"
+              memory: 500Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          volumeMounts:
+            - name: config
+              subPath: haproxy.cfg
+              mountPath: /usr/local/etc/haproxy/haproxy.cfg
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "kubekubevirt.fullname" . }}-haproxy
+{{- else }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "kubekubevirt.fullname" . }}
+  labels:
+    {{- include "kubekubevirt.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- include "kubekubevirt.selectorLabels" . | nindent 4 }}
+    tier: controlplane
+  ports:
+    - name: https
+      port: 6443
+      protocol: TCP
+      targetPort: 6443
+{{- end }}

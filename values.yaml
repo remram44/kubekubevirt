@@ -17,6 +17,11 @@ podSubnet: 172.16.0.0/16
 
 storageClass:
 
+# Deploy haproxy to load-balance the Kubernetes API endpoint
+# This is required if using more than 1 control-plane node
+haproxy:
+  enabled: true
+
 controlPlane:
   count: 1
   memory: 16384M
