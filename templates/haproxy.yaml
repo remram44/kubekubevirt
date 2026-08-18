@@ -47,6 +47,14 @@ data:
         mode tcp
         default_backend k8s-api-servers
 
+    frontend stats
+        mode http
+        bind :8404
+        stats enable
+        stats refresh 30s
+        stats uri /stats
+        stats show-modules
+
     backend k8s-api-servers
         mode tcp
         option tcp-check

@@ -4,6 +4,8 @@ metadata:
   name: {{ include "kubekubevirt.fullname" . }}
   labels:
     {{- include "kubekubevirt.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   storage:
     resources:
