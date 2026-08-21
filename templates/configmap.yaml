@@ -98,6 +98,7 @@ data:
     kubectl apply -f /etc/kubekubevirt/kubelet-csr-approver.yaml
     # Install calico
     kubectl apply -f https://github.com/projectcalico/calico/raw/v3.32.1/manifests/calico.yaml
+    kubectl apply -f /etc/kubekubevirt/calico-resources.yaml
   join-controlplane.sh: |-
     set -x
     while true; do
@@ -130,6 +131,37 @@ data:
       fi
       sleep 10
     done
+  calico-resources.yaml: |
+    ---
+    apiVersion: crd.projectcalico.org/v1
+    kind: IPPool
+    metadata:
+      name: default-ipv4-ippool
+    spec:
+      allowedUses:
+        - Workload
+        - Tunnel
+      assignmentMode: Automatic
+      blockSize: 26
+      cidr: {{ .Values.podSubnet }}
+      natOutgoing: true
+      nodeSelector: all()
+      ipipMode: Never
+      vxlanMode: Always
+    ---
+    apiVersion: crd.projectcalico.org/v1
+    kind: FelixConfiguration
+    metadata:
+      name: default
+    spec:
+      bpfConnectTimeLoadBalancing: TCP
+      bpfHostNetworkedNATWithoutCTLB: Enabled
+      bpfLogLevel: ""
+      floatingIPs: Disabled
+      logSeverityScreen: Info
+      nftablesMode: Auto
+      reportingInterval: 0s
+      vxlanPort: 4779
   kubelet-csr-approver.yaml: |
     # From https://github.com/postfinance/kubelet-csr-approver/raw/v1.2.13/deploy/k8s/clusterrole.yaml
     ---
